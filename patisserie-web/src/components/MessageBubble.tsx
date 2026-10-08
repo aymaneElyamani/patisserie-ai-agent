@@ -21,7 +21,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     <div className="message__content">
       <div className="message__meta">
         <span className="message__author">
-          {isUser ? 'Vous' : 'Atelier Amande'}
+          {isUser ? 'Vous' : 'pâtissIA'}
         </span>
         <time className="message__time" dateTime={message.created_at}>
           {formatTime(message.created_at)}
@@ -43,7 +43,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   return (
     <article
       className={`message message--${isUser ? 'user' : 'assistant'}`}
-      aria-label={isUser ? 'Votre message' : 'Réponse de Atelier Amande'}
+      aria-label={isUser ? 'Votre message' : 'Réponse de pâtissIA'}
     >
       {isUser ? (
         content

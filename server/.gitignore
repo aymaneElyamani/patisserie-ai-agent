@@ -4,4 +4,4 @@ __pycache__/
 .venv/
 src/server/main_local.py
 src/server/static/
-nootbook/
+# nootbook/.ipynb_checkpoints/

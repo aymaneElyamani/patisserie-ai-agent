@@ -156,7 +156,7 @@ export function Sidebar({
           ) : conversations.length === 0 ? (
             <p className="sidebar__empty">
               Aucune conversation pour le moment. Créez la première pour
-              discuter avec Atelier Amande.
+              discuter avec pâtissIA.
             </p>
           ) : (
             <ul className="conversation-list">
@@ -174,7 +174,7 @@ export function Sidebar({
           )}
         </nav>
 
-        <footer className="sidebar__footer">Atelier Amande · Recettes &amp; techniques</footer>
+        <footer className="sidebar__footer">pâtissIA · Recettes &amp; techniques</footer>
       </aside>
     </>
   )

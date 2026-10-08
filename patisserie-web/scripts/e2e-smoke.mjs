@@ -72,7 +72,7 @@ try {
 
   await page.waitForSelector('.message__html h2', { timeout: 15000 })
   const welcome = await page.$eval('.message__html h2', (el) => el.textContent ?? '')
-  check('le message de bienvenue est rendu en HTML', welcome.includes('Atelier Amande'), `"${welcome}"`)
+  check('le message de bienvenue est rendu en HTML', welcome.includes('pâtissIA'), `"${welcome}"`)
 
   const title = await page.$eval('.chat__title', (el) => el.textContent ?? '')
   check('l en-tête affiche le titre', title.length > 0, `"${title}"`)

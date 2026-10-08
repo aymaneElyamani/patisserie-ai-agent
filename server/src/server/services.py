@@ -1,6 +1,8 @@
 """Conversation, message, recipe retrieval, and chatbot business logic."""
 
 import html
+import json
+import logging
 import re
 from pathlib import Path
 
@@ -28,11 +30,12 @@ from .agent import agentOpenAIClient
 from .utils import build_recipe_context
 
 
+logger = logging.getLogger("uvicorn.error")
 
 INSTRUCTIONS_PATH = Path(__file__).resolve().parents[2] / "instructions.md"
 
 DEFAULT_ASSISTANT_MESSAGE = (
-    "<h2>Bienvenue chez Atelier Amande</h2>"
+    "<h2>Bienvenue chez pâtissIA</h2>"
     "<p>Je peux vous aider avec une recette, une technique ou un problème "
     "de pâtisserie. Que souhaitez-vous préparer&nbsp;?</p>"
 )
@@ -79,6 +82,15 @@ def load_chatbot_instructions() -> str:
     instructions = INSTRUCTIONS_PATH.read_text(encoding="utf-8").strip()
     
     return instructions
+
+
+def log_model_prompt(label: str, messages: list[dict[str, str]]) -> None:
+    """Print the exact model message payload in the server console."""
+    logger.info(
+        "Prompt envoyé au chatbot (%s):\n%s",
+        label,
+        json.dumps(messages, ensure_ascii=False, indent=2),
+    )
 
 
 class ConversationService:
@@ -238,6 +250,8 @@ class ChatbotService:
             ),
         ]
 
+        log_model_prompt("génération du titre", title_input)
+
         try:
             response = agentOpenAIClient.chat.completions.create(
                 model=OPENAI_MODEL,
@@ -254,24 +268,35 @@ class ChatbotService:
     @staticmethod
     def generate_response(messages: list[Message], user_content: str) -> str:
         """Generate a contextual response using the configured AI provider."""
-        
         conversation_input = [
             {"role": "system", "content": load_chatbot_instructions()},
         ]
-        
+
         recipe_context = ""
 
         if IS_CSV_DATA_ACTIVE:
-            recipe_context = build_recipe_context(user_content)
+            previous_user_messages = (
+                message.content
+                for message in messages
+                if message.role == MessageRole.USER
+            )
+            recipe_context = build_recipe_context(
+                user_content,
+                previous_user_messages,
+            )
 
         if recipe_context:
             conversation_input.append(
                 {
                     "role": "system",
                     "content": (
-                        "Voici les recettes pertinentes extraites de la base locale. "
-                        "Utilise ces données comme source principale. "
-                        "N'invente pas de quantités ou d'étapes absentes.\n\n"
+                        "Voici les données de référence correspondant à la demande. "
+                        "Utilise-les comme source principale sans mentionner leur "
+                        "format, leur stockage ni leur provenance interne. Recopie "
+                        "exactement les valeurs demandées et n'invente aucune "
+                        "quantité ou étape absente. Le champ Portions doit rester "
+                        "libellé comme tel: ne le transforme ni en personnes ni en "
+                        "pièces.\n\n"
                         f"{recipe_context}"
                     ),
                 }
@@ -282,9 +307,11 @@ class ChatbotService:
         )
         conversation_input.append({"role": "user", "content": user_content})
 
+        log_model_prompt("réponse", conversation_input)
+
         try:
             response = agentOpenAIClient.chat.completions.create(
-                model= OPENAI_MODEL,
+                model=OPENAI_MODEL,
                 messages=conversation_input,
                 temperature=0.2,
             )

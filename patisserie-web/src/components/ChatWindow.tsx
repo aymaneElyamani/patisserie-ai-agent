@@ -62,7 +62,7 @@ function TypingIndicator() {
         <span className="typing__dot" aria-hidden="true" />
         <span className="typing__dot" aria-hidden="true" />
       </div>
-      <span className="typing__label">Atelier Amande rédige sa réponse…</span>
+      <span className="typing__label">pâtissIA rédige sa réponse…</span>
     </div>
   )
 }

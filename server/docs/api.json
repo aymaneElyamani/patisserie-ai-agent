@@ -373,12 +373,17 @@
                     },
                     "assistant_message": {
                         "$ref": "#/components/schemas/MessageRead"
+                    },
+                    "conversation_title": {
+                        "type": "string",
+                        "title": "Conversation Title"
                     }
                 },
                 "type": "object",
                 "required": [
                     "user_message",
-                    "assistant_message"
+                    "assistant_message",
+                    "conversation_title"
                 ],
                 "title": "ChatResponse"
             },
