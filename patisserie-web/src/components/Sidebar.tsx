@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ConversationRead } from '../types/api'
 import { Spinner } from './Spinner'
 
@@ -103,6 +103,25 @@ export function Sidebar({
   onHome,
   onClose,
 }: SidebarProps) {
+  const [search, setSearch] = useState('')
+  const searchRef = useRef<HTMLInputElement | null>(null)
+  const normalizedSearch = search.trim().toLocaleLowerCase('fr-FR')
+  const filteredConversations = conversations.filter((conversation) =>
+    conversation.title.toLocaleLowerCase('fr-FR').includes(normalizedSearch),
+  )
+
+  useEffect(() => {
+    function handleShortcut(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        searchRef.current?.focus()
+      }
+    }
+
+    window.addEventListener('keydown', handleShortcut)
+    return () => window.removeEventListener('keydown', handleShortcut)
+  }, [])
+
   return (
     <>
       <div
@@ -147,7 +166,18 @@ export function Sidebar({
           {creating ? 'Création…' : 'Nouvelle conversation'}
         </button>
 
-        <div className="sidebar__search">⌕ <span>Rechercher</span><kbd>⌘ K</kbd></div>
+        <label className="sidebar__search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            ref={searchRef}
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Rechercher"
+            aria-label="Rechercher une conversation"
+          />
+          <kbd>⌘ K</kbd>
+        </label>
         <p className="sidebar__section-label">Aujourd’hui</p>
 
         <nav className="sidebar__nav" aria-label="Conversations">
@@ -158,9 +188,13 @@ export function Sidebar({
               Aucune conversation pour le moment. Créez la première pour
               discuter avec pâtissIA.
             </p>
+          ) : filteredConversations.length === 0 ? (
+            <p className="sidebar__empty">
+              Aucune conversation ne correspond à « {search} ».
+            </p>
           ) : (
             <ul className="conversation-list">
-              {conversations.map((conversation) => (
+              {filteredConversations.map((conversation) => (
                 <ConversationItem
                   key={conversation.id}
                   conversation={conversation}

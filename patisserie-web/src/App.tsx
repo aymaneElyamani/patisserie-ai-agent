@@ -13,6 +13,7 @@ function toErrorMessage(error: unknown): string {
 }
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true)
   const [conversations, setConversations] = useState<ConversationRead[]>([])
   const [conversationsLoading, setConversationsLoading] = useState(true)
   const [activeId, setActiveId] = useState<number | null>(null)
@@ -25,6 +26,11 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const loadIdRef = useRef(0)
+
+  useEffect(() => {
+    const splashTimer = window.setTimeout(() => setShowSplash(false), 2500)
+    return () => window.clearTimeout(splashTimer)
+  }, [])
 
   const invalidatePendingLoads = useCallback(() => {
     loadIdRef.current += 1
@@ -187,6 +193,22 @@ function App() {
     } finally {
       setSending(false)
     }
+  }
+
+  if (showSplash) {
+    return (
+      <div className="splash-screen" role="status" aria-label="Chargement de PâtissIA">
+        <img
+          className="splash-screen__image"
+          src="/patissia.jpeg"
+          alt="L'équipe PâtissIA dans sa pâtisserie"
+        />
+        <div className="splash-screen__overlay">
+          <span className="splash-screen__brand">Pâtiss<span>IA</span></span>
+          <span className="splash-screen__tagline">Votre assistant pâtisserie</span>
+        </div>
+      </div>
+    )
   }
 
   return (
