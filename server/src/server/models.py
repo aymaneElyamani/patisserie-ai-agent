@@ -6,6 +6,9 @@ from enum import StrEnum
 from sqlmodel import Field, SQLModel
 
 
+DEFAULT_CONVERSATION_TITLE = "Nouvelle conversation"
+
+
 class MessageRole(StrEnum):
     USER = "user"
     ASSISTANT = "assistant"
@@ -29,7 +32,7 @@ class Conversation(ConversationBase, table=True):
 
 class ConversationCreate(SQLModel):
     title: str = Field(
-        default="Nouvelle conversation",
+        default=DEFAULT_CONVERSATION_TITLE,
         min_length=1,
         max_length=30,
     )
@@ -80,3 +83,4 @@ class ChatRequest(SQLModel):
 class ChatResponse(SQLModel):
     user_message: MessageRead
     assistant_message: MessageRead
+    conversation_title: str

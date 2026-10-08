@@ -133,6 +133,85 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(conversation["messages"][0]["role"], "assistant")
         self.assertIn("Bienvenue chez Atelier Amande", conversation["messages"][0]["content"])
 
+    def test_chat_replaces_default_title_with_conversation_context(self) -> None:
+        conversation = self.client.post("/api/conversations", json={}).json()
+
+        with patch(
+            "server.services.agentOpenAIClient.chat.completions.create"
+        ) as create_completion:
+            create_completion.side_effect = [
+                SimpleNamespace(
+                    choices=[
+                        SimpleNamespace(
+                            message=SimpleNamespace(content="<p>Voici la recette.</p>")
+                        )
+                    ]
+                ),
+                SimpleNamespace(
+                    choices=[
+                        SimpleNamespace(
+                            message=SimpleNamespace(content="Ghriba aux amandes")
+                        )
+                    ]
+                ),
+            ]
+            response = self.client.post(
+                f"/api/conversations/{conversation['id']}/chat",
+                json={"content": "Donne-moi la recette de Ghriba aux amandes"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["conversation_title"],
+            "Ghriba aux amandes",
+        )
+        detail = self.client.get(
+            f"/api/conversations/{conversation['id']}"
+        ).json()
+        self.assertEqual(detail["title"], "Ghriba aux amandes")
+        self.assertEqual(create_completion.call_count, 2)
+        title_request = create_completion.call_args.kwargs["messages"]
+        self.assertIn("Génère un titre", title_request[0]["content"])
+        self.assertIn(
+            "Donne-moi la recette de Ghriba aux amandes",
+            [message["content"] for message in title_request],
+        )
+
+    def test_greeting_keeps_default_title_until_topic_is_known(self) -> None:
+        conversation = self.client.post("/api/conversations", json={}).json()
+
+        with patch(
+            "server.services.agentOpenAIClient.chat.completions.create"
+        ) as create_completion:
+            create_completion.return_value = SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content="<p>Bonjour !</p>"))]
+            )
+            response = self.client.post(
+                f"/api/conversations/{conversation['id']}/chat",
+                json={"content": "Bonjour"},
+            )
+
+        self.assertEqual(response.json()["conversation_title"], "Nouvelle conversation")
+
+    def test_custom_title_is_not_overwritten_by_chat(self) -> None:
+        conversation = self.client.post(
+            "/api/conversations",
+            json={"title": "Commande anniversaire"},
+        ).json()
+
+        with patch(
+            "server.services.agentOpenAIClient.chat.completions.create"
+        ) as create_completion:
+            create_completion.return_value = SimpleNamespace(
+                choices=[SimpleNamespace(message=SimpleNamespace(content="<p>D'accord.</p>"))]
+            )
+            response = self.client.post(
+                f"/api/conversations/{conversation['id']}/chat",
+                json={"content": "Je veux préparer des macarons"},
+            )
+
+        self.assertEqual(response.json()["conversation_title"], "Commande anniversaire")
+
     def test_unknown_conversation_returns_404(self) -> None:
         response = self.client.get("/api/conversations/999")
         self.assertEqual(response.status_code, 404)
