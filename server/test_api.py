@@ -8,10 +8,12 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
-from openai import OpenAIError
+from httpx import Request, Response
+from openai import AuthenticationError, OpenAIError
 from sqlmodel import Session, SQLModel, create_engine
 
 from server.database import get_session
+from server.exceptions import ChatbotUnavailableError
 from server.main import app
 from server.services import ChatbotService
 from server.utils import (
@@ -411,6 +413,26 @@ class ApiTestCase(unittest.TestCase):
         ).json()
         self.assertEqual(len(detail["messages"]), 1)
         self.assertEqual(detail["messages"][0]["role"], "assistant")
+
+    def test_authentication_failure_has_actionable_notebook_message(self) -> None:
+        authentication_error = AuthenticationError(
+            "Invalid API key",
+            response=Response(
+                401,
+                request=Request("POST", "https://example.com"),
+            ),
+            body=None,
+        )
+
+        with patch(
+            "server.services.agentOpenAIClient.chat.completions.create",
+            side_effect=authentication_error,
+        ):
+            with self.assertRaises(ChatbotUnavailableError) as captured:
+                ChatbotService.generate_response([], "Bonjour")
+
+        self.assertIn("Mettez à jour GROQ_API", str(captured.exception))
+        self.assertIn("redémarrez", str(captured.exception))
 
 
 if __name__ == "__main__":

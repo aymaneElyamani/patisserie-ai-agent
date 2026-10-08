@@ -6,7 +6,7 @@ import logging
 import re
 from pathlib import Path
 
-from openai import OpenAIError
+from openai import AuthenticationError, OpenAIError, RateLimitError
 from server.env import IS_CSV_DATA_ACTIVE, OPENAI_MODEL, RECENT_MESSAGE_LIMIT
 from sqlmodel import Session, delete, select
 
@@ -315,8 +315,19 @@ class ChatbotService:
                 messages=conversation_input,
                 temperature=0.2,
             )
+        except AuthenticationError as error:
+            raise ChatbotUnavailableError(
+                "Authentification Groq refusée. Mettez à jour GROQ_API dans "
+                "server/.env, puis redémarrez le serveur ou le kernel Jupyter."
+            ) from error
+        except RateLimitError as error:
+            raise ChatbotUnavailableError(
+                "Limite de requêtes Groq atteinte. Patientez puis réessayez."
+            ) from error
         except OpenAIError as error:
-            raise ChatbotUnavailableError from error
+            raise ChatbotUnavailableError(
+                f"Le fournisseur IA est indisponible ({type(error).__name__})."
+            ) from error
 
         assistant_content = response.choices[0].message.content
         if not assistant_content or not assistant_content.strip():
